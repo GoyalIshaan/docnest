@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { FileText, MoreVertical, Trash2, Loader2 } from "lucide-react";
 import { formatDate } from "../utils/formatDate";
+import { convertFromRaw } from "draft-js";
 
 interface DocCardProps {
   id: string;
@@ -22,6 +23,20 @@ const DocCard: React.FC<DocCardProps> = ({
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const plainTextContent = useMemo(() => {
+    try {
+      const parsedContent = JSON.parse(content);
+      if (parsedContent && parsedContent.blocks) {
+        const contentState = convertFromRaw(parsedContent);
+        return contentState.getPlainText();
+      } else {
+        return JSON.stringify(parsedContent);
+      }
+    } catch (error) {
+      return content;
+    }
+  }, [content]);
 
   const handleMoreClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -80,7 +95,9 @@ const DocCard: React.FC<DocCardProps> = ({
           </div>
         </div>
         <div className="h-24 overflow-hidden mb-3">
-          <p className="text-sm text-gray-600 line-clamp-3">{content}</p>
+          <p className="text-sm text-gray-600 line-clamp-3">
+            {plainTextContent}
+          </p>
         </div>
         <div className="flex items-center justify-between text-xs text-gray-400 mt-3">
           <span>Last edited {formatDate(updatedAt)}</span>

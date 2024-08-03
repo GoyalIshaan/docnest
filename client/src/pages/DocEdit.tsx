@@ -1,18 +1,29 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { EditorState, ContentState } from "draft-js";
+import {
+  EditorState,
+  ContentState,
+  convertToRaw,
+  convertFromRaw,
+} from "draft-js";
 import { Editor } from "react-draft-wysiwyg";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 import { useParams } from "react-router-dom";
-import { useGetDocument } from "../hooks/useDocs";
+import { useGetDocument, useSaveDocChanges } from "../hooks/useDocs";
 import DocEditorSkeleton from "../components/DocEditorSkeleton";
 import { useRecoilState } from "recoil";
 import { currentDocState } from "../atom";
-import { Save } from "lucide-react";
+import { Save, Loader } from "lucide-react";
 import ShareComponent from "../components/ShareDoc";
+import toast, { Toaster } from "react-hot-toast";
 
 const DocEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { getDocument, loading } = useGetDocument();
+  const {
+    saveDocChanges,
+    loading: saving,
+    error: saveError,
+  } = useSaveDocChanges();
   const [currentDoc, setCurrentDoc] = useRecoilState(currentDocState);
   const [editorState, setEditorState] = useState(() =>
     EditorState.createEmpty()
@@ -27,8 +38,14 @@ const DocEditor: React.FC = () => {
           if (doc) {
             setCurrentDoc(doc);
             if (doc.content) {
-              const contentState = ContentState.createFromText(doc.content);
-              setEditorState(EditorState.createWithContent(contentState));
+              try {
+                const contentState = convertFromRaw(JSON.parse(doc.content));
+                setEditorState(EditorState.createWithContent(contentState));
+              } catch (error) {
+                console.error("Error parsing document content:", error);
+                const contentState = ContentState.createFromText(doc.content);
+                setEditorState(EditorState.createWithContent(contentState));
+              }
             }
           } else {
             setDocNotFound(true);
@@ -46,7 +63,9 @@ const DocEditor: React.FC = () => {
   const onEditorStateChange = useCallback(
     (newEditorState: EditorState) => {
       setEditorState(newEditorState);
-      const content = newEditorState.getCurrentContent().getPlainText();
+      const content = JSON.stringify(
+        convertToRaw(newEditorState.getCurrentContent())
+      );
       setCurrentDoc((prev) => ({ ...prev, content }));
     },
     [setCurrentDoc]
@@ -60,10 +79,21 @@ const DocEditor: React.FC = () => {
     [setCurrentDoc]
   );
 
-  const handleSave = () => {
-    console.log("Saving document:", currentDoc);
-    // Implement your save logic here
+  const handleSave = async () => {
+    try {
+      await saveDocChanges();
+      toast.success("Document saved successfully!");
+    } catch (error) {
+      console.error("Error saving document:", error);
+      toast.error("Failed to save document. Please try again.");
+    }
   };
+
+  useEffect(() => {
+    if (saveError) {
+      toast.error(`Error saving document: ${saveError}`);
+    }
+  }, [saveError]);
 
   if (loading) {
     return <DocEditorSkeleton />;
@@ -86,6 +116,7 @@ const DocEditor: React.FC = () => {
 
   return (
     <div className="flex flex-col bg-gray-100 p-6 h-screen">
+      <Toaster />
       <div className="flex items-center justify-between mb-6">
         <input
           type="text"
@@ -98,10 +129,15 @@ const DocEditor: React.FC = () => {
           <ShareComponent />
           <button
             onClick={handleSave}
-            className="px-6 py-3 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-300 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50"
+            disabled={saving}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-300 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="w-5 h-5 mr-2" />
-            Save
+            {saving ? (
+              <Loader className="w-5 h-5 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-5 h-5 mr-2" />
+            )}
+            {saving ? "Saving..." : "Save"}
           </button>
         </div>
       </div>

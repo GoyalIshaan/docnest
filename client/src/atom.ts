@@ -1,17 +1,7 @@
 import { atom } from "recoil";
+import { Doc, User } from "./types";
 
-interface Doc {
-  id: string;
-  title: string;
-  content: string;
-  summary: string | null;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-  ownerId: string;
-}
-
-export const userState = atom({
+export const userState = atom<User>({
   key: "userState",
   default: {
     id: "",

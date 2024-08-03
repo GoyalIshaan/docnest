@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useSetRecoilState } from "recoil";
+import { useRecoilValue, useSetRecoilState } from "recoil";
 import {
   currentDocState,
   docsState,
@@ -141,6 +141,37 @@ const useGetDocument = () => {
   return { getDocument, loading, error };
 };
 
+const useSaveDocChanges = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const currentDoc = useRecoilValue(currentDocState);
+
+  const saveDocChanges = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await axios.put(
+        `${LOCALHOST}/api/docs/${currentDoc.id}`,
+        {
+          title: currentDoc.title,
+          content: currentDoc.content,
+        },
+        {
+          withCredentials: true,
+        }
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "An unknown error occurred"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { saveDocChanges, loading, error };
+};
+
 const useGetCollaborators = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -226,6 +257,7 @@ export {
   useGetUserDocs,
   useCreateDoc,
   useGetDocument,
+  useSaveDocChanges,
   useDeleteDoc,
   useGetCollaborators,
   useAddCollaborator,

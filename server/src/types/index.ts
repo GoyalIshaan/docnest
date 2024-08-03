@@ -18,3 +18,11 @@ declare global {
     }
   }
 }
+
+export interface IncomingMessage {
+  type: "joinedDoc" | "edit";
+  docId: string;
+  editorId: string;
+  titleEdit: string;
+  contentEdit: string;
+}

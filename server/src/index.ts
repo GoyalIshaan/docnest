@@ -1,4 +1,6 @@
+import http from "http";
 import express, { Request, Response, NextFunction } from "express";
+import { WebSocketServer } from "ws";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -9,6 +11,9 @@ import { authMiddleware } from "./auth";
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
+
 const port = process.env.PORT || 8000;
 
 app.use(
@@ -33,6 +38,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).send("Something broke!");
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
