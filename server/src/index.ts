@@ -7,12 +7,12 @@ import cookieParser from "cookie-parser";
 import userRouter from "./routers/userRouter";
 import docRouter from "./routers/docRouter";
 import { authMiddleware } from "./auth";
+import { setupWebSocketServer } from "./webSocketRouter";
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
 
 const port = process.env.PORT || 8000;
 
@@ -38,6 +38,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).send("Something broke!");
 });
 
+const wss = setupWebSocketServer(server);
 server.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

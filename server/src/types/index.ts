@@ -1,3 +1,5 @@
+import { WebSocket } from "ws";
+
 export interface IUser {
   id: string;
   username: string;
@@ -25,4 +27,15 @@ export interface IncomingMessage {
   editorId: string;
   titleEdit: string;
   contentEdit: string;
+}
+
+export interface AutomergeDocument {
+  title: string;
+  content: string;
+  tags: string[];
+}
+
+export interface ExtWebSocket extends WebSocket {
+  userId?: string;
+  documentId?: string;
 }

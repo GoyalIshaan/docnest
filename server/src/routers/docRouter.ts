@@ -1,6 +1,8 @@
 import express from "express";
 import { Request } from "express";
 import { PrismaClient } from "@prisma/client";
+import * as Automerge from "@automerge/automerge";
+import { AutomergeDocument } from "../types";
 
 const docRouter = express.Router();
 const prisma = new PrismaClient();
@@ -10,55 +12,34 @@ const prisma = new PrismaClient();
 // @access Private
 docRouter.post("/", async (req: Request, res) => {
   try {
-    const { title, content } = req.body;
-
     if (req.user === undefined) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
+    const automergeDoc = Automerge.init<AutomergeDocument>();
+    const updatedDoc = Automerge.change(automergeDoc, (doc) => {
+      doc.title = "Untitled Document";
+      doc.content = "";
+      doc.tags = [];
+    });
+
+    const serializedDoc = Automerge.save(updatedDoc);
+
     const doc = await prisma.document.create({
       data: {
-        title,
-        content,
+        automergeState: Buffer.from(serializedDoc),
         ownerId: req.user?.id,
       },
     });
 
-    res.status(201).json({ doc });
-  } catch (error) {
-    res.status(500).json({ message: "Internal server error", error });
-  }
-});
+    const loadedDoc = Automerge.load<AutomergeDocument>(doc.automergeState);
 
-// @desc Update A Document
-// @route PUT /api/docs/:id/
-// @access Private
-docRouter.put("/:id/", async (req: Request, res) => {
-  try {
-    const { id } = req.params;
-    const { title, content } = req.body;
-
-    const doc = await prisma.document.findUnique({
-      where: {
-        id: id,
-      },
+    res.status(201).json({
+      id: doc.id,
+      title: loadedDoc.title,
+      content: loadedDoc.content,
+      tags: loadedDoc.tags,
     });
-
-    if (!doc) {
-      return res.status(404).json({ message: "Document not found" });
-    }
-
-    const updatedDoc = await prisma.document.update({
-      where: {
-        id: id,
-      },
-      data: {
-        title,
-        content,
-      },
-    });
-
-    res.status(200).json({ updatedDoc });
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error });
   }
@@ -75,7 +56,20 @@ docRouter.get("/", async (req: Request, res) => {
       },
     });
 
-    res.status(200).json({ docs });
+    const processedDocs = docs.map((doc) => {
+      const loadedDoc = Automerge.load<AutomergeDocument>(doc.automergeState);
+      return {
+        id: doc.id,
+        title: loadedDoc.title,
+        content: loadedDoc.content,
+        tags: loadedDoc.tags,
+        ownerId: doc.ownerId,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+      };
+    });
+
+    res.status(200).json({ docs: processedDocs });
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error });
   }
@@ -119,6 +113,8 @@ docRouter.get("/:id/", async (req: Request, res) => {
       return res.status(404).json({ message: "Document not found" });
     }
 
+    const loadedDoc = Automerge.load<AutomergeDocument>(doc.automergeState);
+
     const sharedWith = await prisma.document.findUnique({
       where: {
         id: id,
@@ -137,7 +133,15 @@ docRouter.get("/:id/", async (req: Request, res) => {
         sharedWith.sharedWith.find((user) => user.id === req.user?.id)) ||
       doc.ownerId === req.user?.id
     ) {
-      return res.status(200).json({ doc });
+      return res.status(200).json({
+        id: doc.id,
+        title: loadedDoc.title,
+        content: loadedDoc.content,
+        tags: loadedDoc.tags,
+        ownerId: doc.ownerId,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+      });
     } else {
       return res.status(403).json({ message: "Unauthorized" });
     }
