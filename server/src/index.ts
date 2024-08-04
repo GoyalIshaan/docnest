@@ -38,7 +38,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).send("Something broke!");
 });
 
-const wss = setupWebSocketServer(server);
+setupWebSocketServer(server);
 server.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

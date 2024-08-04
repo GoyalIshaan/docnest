@@ -123,8 +123,16 @@ const useGetDocument = () => {
         const response = await axios.get(`${LOCALHOST}/api/docs/${id}`, {
           withCredentials: true,
         });
-        const doc = response.data.doc;
-        setCurrentDoc(doc);
+        const doc = response.data;
+        setCurrentDoc({
+          id: doc.id,
+          title: doc.title,
+          content: doc.content,
+          tags: doc.tags,
+          ownerId: doc.ownerId,
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+        });
         return doc;
       } catch (error) {
         setError(

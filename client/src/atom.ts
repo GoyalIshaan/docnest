@@ -26,7 +26,6 @@ export const currentDocState = atom<Doc>({
     id: "",
     title: "",
     content: "",
-    summary: "",
     tags: [],
     createdAt: "",
     updatedAt: "",

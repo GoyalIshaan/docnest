@@ -79,7 +79,6 @@ async function handleUpdate(
       data: { automergeState: Buffer.from(Automerge.save(automergeDoc)) },
     });
 
-    // Broadcast changes to all clients except the sender
     wss.clients.forEach((client: ExtWebSocket) => {
       if (
         client !== ws &&

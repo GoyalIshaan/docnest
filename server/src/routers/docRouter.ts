@@ -90,7 +90,20 @@ docRouter.get("/shared/", async (req: Request, res) => {
       },
     });
 
-    res.status(200).json({ docs });
+    const processedDocs = docs.map((doc) => {
+      const loadedDoc = Automerge.load<AutomergeDocument>(doc.automergeState);
+      return {
+        id: doc.id,
+        title: loadedDoc.title,
+        content: loadedDoc.content,
+        tags: loadedDoc.tags,
+        ownerId: doc.ownerId,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+      };
+    });
+
+    res.status(200).json({ docs: processedDocs });
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error });
   }
