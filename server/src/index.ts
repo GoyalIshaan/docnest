@@ -1,6 +1,5 @@
 import http from "http";
 import express, { Request, Response, NextFunction } from "express";
-import { WebSocketServer } from "ws";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
