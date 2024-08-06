@@ -1,30 +1,41 @@
 import { Server } from "http";
-import WebSocket from "ws";
-import { WebSocketServer } from "ws";
+import * as Y from "yjs";
 import { PrismaClient } from "@prisma/client";
-import * as Automerge from "@automerge/automerge";
-import { AutomergeDocument, ExtWebSocket } from "./types";
+import WebSocket from "ws";
+import { ExtWebSocket, IncomingMessage } from "./types";
 
 const prisma = new PrismaClient();
 
-const documentStates = new Map<string, WebSocket[]>();
+const docs = new Map<string, Y.Doc>();
+
+const workingDocuments = new Map<string, ExtWebSocket[]>();
 
 export function setupWebSocketServer(server: Server) {
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocket.Server({ server });
 
-  wss.on("connection", (ws: WebSocket) => {
-    console.log("New WebSocket connection");
+  wss.on("connection", (ws: ExtWebSocket) => {
+    ws.isAlive = true;
 
     ws.on("message", async (message: string) => {
       try {
-        const data = JSON.parse(message);
-
+        const data: IncomingMessage = JSON.parse(message);
         switch (data.type) {
-          case "join":
-            await handleJoin(ws, data);
+          case "join": {
+            const { userId, documentId } = data;
+            if (!userId || !documentId) {
+              errorResponse(ws, "Invalid join message");
+              return;
+            }
+            await handleJoin(ws, userId, documentId);
             break;
+          }
           case "update":
-            await handleUpdate(ws, data);
+            const { updates } = data;
+            if (!updates) {
+              errorResponse(ws, "Invalid update message");
+              return;
+            }
+            handleUpdate(ws, updates);
             break;
           default:
             ws.send(
@@ -32,127 +43,120 @@ export function setupWebSocketServer(server: Server) {
             );
         }
       } catch (error) {
-        console.error("Error processing message:", error);
+        console.error("Error handling message:", error);
         ws.send(
-          JSON.stringify({ type: "error", message: "Error processing message" })
+          JSON.stringify({ type: "error", message: "Invalid message format" })
         );
       }
     });
 
+    ws.on("pong", () => {
+      ws.isAlive = true;
+    });
+
     ws.on("close", () => {
-      console.log("WebSocket connection closed");
+      if (ws.documentId) {
+        console.log(`Client disconnected from document ${ws.documentId}`);
+      }
     });
   });
 
-  return wss;
+  const interval = setInterval(() => {
+    wss.clients.forEach((ws: ExtWebSocket) => {
+      if (ws.isAlive === false) return ws.terminate();
+      ws.isAlive = false;
+      ws.ping(() => {});
+    });
+  }, 30000);
+
+  wss.on("close", () => {
+    clearInterval(interval);
+  });
+
+  // Periodically save all active documents
+  setInterval(() => {
+    docs.forEach((doc, docId) => saveDocument(docId, doc));
+  }, 5000);
 }
+
+const errorResponse = (ws: ExtWebSocket, message: string) => {
+  ws.send(JSON.stringify({ type: "error", message }));
+};
 
 async function handleJoin(
-  ws: WebSocket,
-  data: { userId: string; documentId: string }
-) {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: data.userId },
-    });
-
-    if (!user) {
-      ws.send(
-        JSON.stringify({ type: "error", message: "Authentication failed" })
-      );
-      return;
-    }
-
-    const document = await prisma.document.findUnique({
-      where: { id: data.documentId },
-      include: { sharedWith: true },
-    });
-
-    if (
-      !document ||
-      (document.ownerId !== user.id &&
-        !document.sharedWith.some((u) => u.id === user.id))
-    ) {
-      ws.send(JSON.stringify({ type: "error", message: "Access denied" }));
-      return;
-    }
-
-    documentStates.set(data.documentId, [
-      ...(documentStates.get(data.documentId) || []),
-      ws,
-    ]);
-
-    ws.send(JSON.stringify({ type: "joined", documentId: data.documentId }));
-  } catch (error) {
-    console.error("Error in handleJoin:", error);
-    ws.send(
-      JSON.stringify({ type: "error", message: "Error joining document" })
-    );
-  }
-}
-
-async function handleUpdate(
   ws: ExtWebSocket,
-  data: { docId: string; changes: number[][] }
+  userId: string,
+  documentId: string
 ) {
-  if (!data.docId) {
-    ws.send(
-      JSON.stringify({ type: "error", message: "No document ID provided" })
-    );
-    return;
+  ws.userId = userId;
+  ws.documentId = documentId;
+
+  let doc = docs.get(documentId);
+  if (!doc) {
+    doc = new Y.Doc();
+    docs.set(documentId, doc);
+    await loadDocumentContent(documentId, doc);
   }
+  const clients = workingDocuments.get(documentId) || [];
+  workingDocuments.set(documentId, [...clients, ws]);
 
-  try {
-    const doc = await prisma.document.findUnique({
-      where: { id: data.docId },
-    });
+  ws.yDoc = doc;
 
-    if (!doc) {
-      ws.send(JSON.stringify({ type: "error", message: "Document not found" }));
-      return;
-    }
+  // Send the initial document state to the client
+  const initialUpdate = Y.encodeStateAsUpdate(doc);
+  ws.send(JSON.stringify({ type: "sync", update: Array.from(initialUpdate) }));
 
-    let automergeDoc = Automerge.load<AutomergeDocument>(doc.automergeState);
-
-    const changesUint8Array = data.changes.map(
-      (change) => new Uint8Array(change)
-    );
-
-    [automergeDoc] = Automerge.applyChanges(automergeDoc, changesUint8Array);
-
-    await prisma.document.update({
-      where: { id: data.docId },
-      data: { automergeState: Buffer.from(Automerge.save(automergeDoc)) },
-    });
-
-    broadcastUpdate(data.docId, ws, {
-      type: "update",
-      docId: data.docId,
-      changes: data.changes,
-    });
-  } catch (error) {
-    console.error("Error handling document update:", error);
-    ws.send(
-      JSON.stringify({ type: "error", message: "Error updating document" })
-    );
-  }
+  console.log(`Client ${ws.userId} joined document ${ws.documentId}`);
 }
+
+function handleUpdate(ws: ExtWebSocket, updates: number[]) {
+  if (!ws.yDoc || !ws.documentId) return;
+
+  // Apply the update to the Yjs document
+  Y.applyUpdate(ws.yDoc, new Uint8Array(updates));
+
+  // Broadcast the update to all other clients
+  broadcastUpdate(ws.documentId, updates, ws);
+}
+
+// HERE GOES EVERYTHIN THAT WORKS
 
 function broadcastUpdate(
-  documentId: string,
-  sender: ExtWebSocket,
-  message: any
+  docId: string,
+  update: number[],
+  sender: ExtWebSocket
 ) {
-  const clients = documentStates.get(documentId);
-  if (!clients) {
-    return;
-  }
-
-  console.log("Broadcasting update to", clients.length, "clients");
-
-  clients.forEach((client) => {
+  const clients = workingDocuments.get(docId) || [];
+  clients.forEach((client: ExtWebSocket) => {
     if (client !== sender && client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(message));
+      client.send(JSON.stringify({ type: "update", update }));
     }
   });
+}
+
+async function loadDocumentContent(docId: string, ydoc: Y.Doc) {
+  try {
+    const doc = await prisma.document.findUnique({
+      where: { id: docId },
+    });
+
+    if (doc && doc.content) {
+      Y.applyUpdate(ydoc, new Uint8Array(doc.content));
+    }
+  } catch (error) {
+    console.error("Error loading document content:", error);
+  }
+}
+
+async function saveDocument(docId: string, ydoc: Y.Doc) {
+  try {
+    const content = Y.encodeStateAsUpdate(ydoc);
+    await prisma.document.update({
+      where: { id: docId },
+      data: { content: Buffer.from(content) },
+    });
+    console.log(`Document ${docId} saved`);
+  } catch (error) {
+    console.error("Error saving document:", error);
+  }
 }

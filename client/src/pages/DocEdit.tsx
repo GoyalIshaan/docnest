@@ -1,28 +1,26 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  EditorState,
-  ContentState,
-  convertToRaw,
-  convertFromRaw,
-} from "draft-js";
-import { Editor } from "react-draft-wysiwyg";
-import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
+import { useRecoilState, useRecoilValue } from "recoil";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 import { useGetDocument } from "../hooks/useDocs";
+import { currentDocState, userState } from "../atom";
 import DocEditorSkeleton from "../components/DocEditorSkeleton";
-import { useRecoilState } from "recoil";
-import { currentDocState } from "../atom";
 import ShareComponent from "../components/ShareDoc";
+import { useCustomYjsCollaboration } from "../hooks/useYjsCollaboration";
 
 const DocEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { getDocument, loading } = useGetDocument();
   const [currentDoc, setCurrentDoc] = useRecoilState(currentDocState);
-  const [editorState, setEditorState] = useState(() =>
-    EditorState.createEmpty()
-  );
-
+  const user = useRecoilValue(userState);
   const [docNotFound, setDocNotFound] = useState(false);
+  const quillRef = useRef<ReactQuill>(null);
+
+  const { isConnected, error, getYText } = useCustomYjsCollaboration(
+    user.id,
+    id || ""
+  );
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -31,16 +29,6 @@ const DocEditor: React.FC = () => {
           const doc = await getDocument(id);
           if (doc) {
             setCurrentDoc(doc);
-            if (doc.content) {
-              try {
-                const contentState = convertFromRaw(JSON.parse(doc.content));
-                setEditorState(EditorState.createWithContent(contentState));
-              } catch (error) {
-                console.error("Error parsing document content:", error);
-                const contentState = ContentState.createFromText(doc.content);
-                setEditorState(EditorState.createWithContent(contentState));
-              }
-            }
           } else {
             setDocNotFound(true);
           }
@@ -54,24 +42,39 @@ const DocEditor: React.FC = () => {
     loadDocument();
   }, [id, getDocument, setCurrentDoc]);
 
-  const onEditorStateChange = useCallback(
-    (newEditorState: EditorState) => {
-      setEditorState(newEditorState);
-      const content = JSON.stringify(
-        convertToRaw(newEditorState.getCurrentContent())
-      );
-      setCurrentDoc((prev) => ({ ...prev, content }));
+  const handleContentChange = useCallback(
+    (content: string) => {
+      const ytext = getYText();
+      if (ytext) {
+        const delta = quillRef.current?.getEditor().getContents();
+        console.log(delta);
+        ytext.delete(0, ytext.length);
+        ytext.insert(0, content);
+        setCurrentDoc((prev) => ({ ...prev, content }));
+      }
     },
-    [setCurrentDoc]
+    [getYText, setCurrentDoc]
   );
 
-  const handleTitleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newTitle = e.target.value;
-      setCurrentDoc((prev) => ({ ...prev, title: newTitle }));
-    },
-    [setCurrentDoc]
-  );
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentDoc((prev) => ({ ...prev, title: e.target.value }));
+    // Here you would typically save the document title
+    // For example: saveDocumentTitle(e.target.value);
+  };
+
+  useEffect(() => {
+    if (isConnected && quillRef.current) {
+      const ytext = getYText();
+      if (ytext) {
+        const quill = quillRef.current.getEditor();
+        quill.setText(ytext.toString());
+
+        ytext.observe(() => {
+          quill.setText(ytext.toString());
+        });
+      }
+    }
+  }, [isConnected, getYText]);
 
   if (loading) {
     return <DocEditorSkeleton />;
@@ -92,12 +95,20 @@ const DocEditor: React.FC = () => {
     );
   }
 
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  if (!isConnected) {
+    return <div>Connecting to collaborative session...</div>;
+  }
+
   return (
     <div className="flex flex-col bg-gray-100 p-6 h-screen">
       <div className="flex items-center justify-between mb-6">
         <input
           type="text"
-          value={currentDoc.title}
+          value={currentDoc?.title || ""}
           onChange={handleTitleChange}
           className="text-3xl font-bold py-2 px-4 bg-transparent border-b-2 border-transparent focus:border-blue-500 focus:outline-none transition-colors duration-300 w-full mr-4"
           placeholder="Document Title"
@@ -107,27 +118,24 @@ const DocEditor: React.FC = () => {
         </div>
       </div>
       <div className="flex-grow bg-white rounded-lg shadow-lg overflow-hidden">
-        <Editor
-          editorState={editorState}
-          onEditorStateChange={onEditorStateChange}
-          wrapperClassName="h-full"
-          editorClassName="h-full px-6 py-4"
-          toolbarClassName="border-b border-gray-200"
-          toolbar={{
-            options: [
-              "inline",
-              "blockType",
-              "fontSize",
-              "fontFamily",
-              "list",
-              "textAlign",
-              "colorPicker",
-              "link",
-              "embedded",
-              "emoji",
-              "image",
-              "remove",
-              "history",
+        <ReactQuill
+          ref={quillRef}
+          theme="snow"
+          value={currentDoc?.content || ""}
+          onChange={handleContentChange}
+          className="h-full"
+          modules={{
+            toolbar: [
+              [{ header: [1, 2, 3, false] }],
+              ["bold", "italic", "underline", "strike", "blockquote"],
+              [
+                { list: "ordered" },
+                { list: "bullet" },
+                { indent: "-1" },
+                { indent: "+1" },
+              ],
+              ["link", "image"],
+              ["clean"],
             ],
           }}
         />

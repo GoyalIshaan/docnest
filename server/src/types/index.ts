@@ -1,3 +1,4 @@
+import * as Y from "yjs";
 import { WebSocket } from "ws";
 
 export interface IUser {
@@ -21,21 +22,16 @@ declare global {
   }
 }
 
-export interface IncomingMessage {
-  type: "joinedDoc" | "edit";
-  docId: string;
-  editorId: string;
-  titleEdit: string;
-  contentEdit: string;
-}
-
-export interface AutomergeDocument {
-  title: string;
-  content: string;
-  tags: string[];
-}
-
 export interface ExtWebSocket extends WebSocket {
   userId?: string;
+  isAlive?: boolean;
   documentId?: string;
+  yDoc?: Y.Doc;
+}
+
+export interface IncomingMessage {
+  type: "join" | "update";
+  userId?: string;
+  documentId?: string;
+  updates?: number[];
 }

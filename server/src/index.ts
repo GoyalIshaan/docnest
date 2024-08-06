@@ -38,6 +38,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 setupWebSocketServer(server);
+
 server.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

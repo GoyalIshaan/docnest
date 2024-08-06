@@ -21,7 +21,8 @@ model User {
 
 model Document {
   id          String   @id @default(uuid())
-  automergeState Bytes
+  title       String @default("Untitled Document")
+  content     Bytes
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   owner       User     @relation("OwnedDocuments", fields: [ownerId], references: [id])

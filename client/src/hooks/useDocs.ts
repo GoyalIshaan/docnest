@@ -124,15 +124,16 @@ const useGetDocument = () => {
           withCredentials: true,
         });
         const doc = response.data;
+
         setCurrentDoc({
           id: doc.id,
           title: doc.title,
           content: doc.content,
-          tags: doc.tags,
           ownerId: doc.ownerId,
           createdAt: doc.createdAt,
           updatedAt: doc.updatedAt,
         });
+        console.log(doc);
         return doc;
       } catch (error) {
         setError(

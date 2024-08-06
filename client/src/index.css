@@ -1,3 +1,18 @@
+/* In your global CSS file or a CSS module */
+
+#editor {
+  /* Ensure the editor takes up the full width and height of its container */
+  width: 100%;
+  height: 100%;
+  /* Add some padding */
+  padding: 16px;
+  /* Set a border or any other custom styles you want */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  /* Ensure content inside the editor doesn't overflow */
+  overflow: auto;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
