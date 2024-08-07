@@ -2,6 +2,7 @@ export interface Doc {
   id: string;
   title: string;
   content: string;
+  summary: string;
   createdAt: string;
   updatedAt: string;
   ownerId: string;

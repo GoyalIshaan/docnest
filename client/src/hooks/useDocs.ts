@@ -129,6 +129,7 @@ const useGetDocument = () => {
           id: doc.id,
           title: doc.title,
           content: doc.content,
+          summary: doc.summary,
           ownerId: doc.ownerId,
           createdAt: doc.createdAt,
           updatedAt: doc.updatedAt,
@@ -212,6 +213,73 @@ const useGetCollaborators = () => {
   return { getCollaborators, loading, error };
 };
 
+const useUpdateTitle = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const title = useRecoilValue(currentDocState).title;
+
+  const updateTitle = useCallback(
+    async (docId: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        await axios.put(
+          `${LOCALHOST}/api/docs/${docId}/title/`,
+          {
+            title,
+          },
+          {
+            withCredentials: true,
+          }
+        );
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "An unknown error occurred"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [title]
+  );
+
+  return { updateTitle, loading, error };
+};
+
+const useUpdateSummary = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const summary = useRecoilValue(currentDocState).summary;
+  console.log("summary", summary);
+
+  const updateSummary = useCallback(
+    async (docId: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        await axios.put(
+          `${LOCALHOST}/api/docs/${docId}/summary/`,
+          {
+            summary,
+          },
+          {
+            withCredentials: true,
+          }
+        );
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "An unknown error occurred"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [summary]
+  );
+
+  return { updateSummary, loading, error };
+};
+
 const useAddCollaborator = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -272,4 +340,6 @@ export {
   useAddCollaborator,
   useRemoveCollaborator,
   useGetSharedDocs,
+  useUpdateTitle,
+  useUpdateSummary,
 };

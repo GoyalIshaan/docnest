@@ -1,0 +1,10 @@
+import { PrismaClient } from "@prisma/client";
+import { Comment, ExtWebSocket } from "../types";
+import * as Y from "yjs";
+
+export const docs = new Map<string, Y.Doc>();
+export const comments = new Map<string, Y.Array<Comment>>();
+
+export const workingDocuments = new Map<string, ExtWebSocket[]>();
+
+export const prisma = new PrismaClient();

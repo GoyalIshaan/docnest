@@ -34,9 +34,7 @@ export const useCustomYjsCollaboration = (
 
     ws.onmessage = (event: MessageEvent) => {
       const message: ServerMessage = JSON.parse(event.data);
-      if (message.type === "sync" || message.type === "update") {
-        Y.applyUpdate(yDoc, new Uint8Array(message.update));
-      }
+      Y.applyUpdate(yDoc, new Uint8Array(message.update));
     };
 
     ws.onclose = () => {

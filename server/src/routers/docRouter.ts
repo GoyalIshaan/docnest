@@ -58,6 +58,7 @@ docRouter.get("/", async (req: Request, res) => {
         id: doc.id,
         title: doc.title,
         content: ytext.toString(),
+        summary: doc.summary,
         ownerId: doc.ownerId,
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
@@ -93,6 +94,7 @@ docRouter.get("/shared/", async (req: Request, res) => {
         id: doc.id,
         title: doc.title,
         content: ytext.toString(),
+        summary: doc.summary,
         ownerId: doc.ownerId,
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
@@ -148,6 +150,7 @@ docRouter.get("/:id/", async (req: Request, res) => {
         id: doc.id,
         title: doc.title,
         content: ytext.toString(),
+        summary: doc.summary,
         ownerId: doc.ownerId,
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
@@ -155,6 +158,72 @@ docRouter.get("/:id/", async (req: Request, res) => {
     } else {
       return res.status(403).json({ message: "Unauthorized" });
     }
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error });
+  }
+});
+
+// @desc Update Title of Document
+// @route PUT /api/docs/:id/
+// @access Private
+docRouter.put("/:id/title/", async (req: Request, res) => {
+  try {
+    const { id } = req.params;
+    const { title } = req.body;
+
+    const doc = await prisma.document.findUnique({
+      where: {
+        id: id,
+      },
+    });
+
+    if (!doc) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    await prisma.document.update({
+      where: {
+        id: id,
+      },
+      data: {
+        title: title,
+      },
+    });
+
+    res.status(200).json({ message: "Document title updated" });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error });
+  }
+});
+
+// @desc Update Summary of Document
+// @ route PUT /api/docs/:id/summary/
+// @access Private
+docRouter.put("/:id/summary/", async (req: Request, res) => {
+  try {
+    const { id } = req.params;
+    const { summary } = req.body;
+
+    const doc = await prisma.document.findUnique({
+      where: {
+        id: id,
+      },
+    });
+
+    if (!doc) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    await prisma.document.update({
+      where: {
+        id: id,
+      },
+      data: {
+        summary: summary,
+      },
+    });
+
+    res.status(200).json({ message: "Document summary updated" });
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error });
   }

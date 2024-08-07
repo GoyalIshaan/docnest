@@ -29,9 +29,21 @@ export interface ExtWebSocket extends WebSocket {
   yDoc?: Y.Doc;
 }
 
-export interface IncomingMessage {
-  type: "join" | "update";
-  userId?: string;
-  documentId?: string;
-  updates?: number[];
+export interface Comment {
+  id: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userld: string;
+  documentId: string;
+  startIndex: number | null;
+  endIndex: number | null;
+  status: CommentStatus;
+  parentId: string | null;
+}
+
+export enum CommentStatus {
+  ACTIVE = "active",
+  RESOLVED = "resolved",
+  DELETED = "deleted",
 }
