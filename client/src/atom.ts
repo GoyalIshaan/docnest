@@ -1,6 +1,5 @@
 import { atom } from "recoil";
-import * as Automerge from "@automerge/automerge";
-import { AutomergeDocument, Doc, User } from "./types";
+import { Doc, User } from "./types";
 
 export const userState = atom<User>({
   key: "userState",
@@ -36,9 +35,4 @@ export const currentDocState = atom<Doc>({
 export const sharedWithUsers = atom({
   key: "sharedUsers",
   default: [],
-});
-
-export const automergeDocState = atom<AutomergeDocument>({
-  key: "automergeDocState",
-  default: Automerge.init<AutomergeDocument>(),
 });

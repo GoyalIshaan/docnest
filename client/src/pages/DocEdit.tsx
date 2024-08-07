@@ -16,6 +16,7 @@ const DocEditor: React.FC = () => {
   const user = useRecoilValue(userState);
   const [docNotFound, setDocNotFound] = useState(false);
   const quillRef = useRef<ReactQuill>(null);
+  const isLocalChange = useRef(false);
 
   const { isConnected, error, getYText } = useCustomYjsCollaboration(
     user.id,
@@ -44,14 +45,15 @@ const DocEditor: React.FC = () => {
 
   const handleContentChange = useCallback(
     (content: string) => {
+      if (isLocalChange.current) return;
+      isLocalChange.current = true;
       const ytext = getYText();
       if (ytext) {
-        const delta = quillRef.current?.getEditor().getContents();
-        console.log(delta);
         ytext.delete(0, ytext.length);
         ytext.insert(0, content);
         setCurrentDoc((prev) => ({ ...prev, content }));
       }
+      isLocalChange.current = false;
     },
     [getYText, setCurrentDoc]
   );
@@ -67,10 +69,17 @@ const DocEditor: React.FC = () => {
       const ytext = getYText();
       if (ytext) {
         const quill = quillRef.current.getEditor();
+
+        // Initial sync
         quill.setText(ytext.toString());
 
+        // Listen for remote changes
         ytext.observe(() => {
-          quill.setText(ytext.toString());
+          if (!isLocalChange.current) {
+            isLocalChange.current = true;
+            quill.setText(ytext.toString());
+            isLocalChange.current = false;
+          }
         });
       }
     }
