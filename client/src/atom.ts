@@ -1,5 +1,5 @@
 import { atom } from "recoil";
-import { Doc, User } from "./types";
+import { Doc, Message, User } from "./types";
 
 export const userState = atom<User>({
   key: "userState",
@@ -31,6 +31,11 @@ export const currentDocState = atom<Doc>({
     updatedAt: "",
     ownerId: "",
   },
+});
+
+export const messagesState = atom<Message[]>({
+  key: "messagesState",
+  default: [],
 });
 
 export const sharedWithUsers = atom({

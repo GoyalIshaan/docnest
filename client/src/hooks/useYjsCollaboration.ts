@@ -2,9 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import * as Y from "yjs";
 import { useRecoilState } from "recoil";
 import { currentDocState } from "../atom";
-import { UpdateMessage, SyncMessage } from "../types";
-
-type ServerMessage = UpdateMessage | SyncMessage;
 
 export const useCustomYjsCollaboration = (
   userId: string,
@@ -33,8 +30,26 @@ export const useCustomYjsCollaboration = (
     };
 
     ws.onmessage = (event: MessageEvent) => {
-      const message: ServerMessage = JSON.parse(event.data);
-      Y.applyUpdate(yDoc, new Uint8Array(message.update));
+      const message = JSON.parse(event.data);
+      const { type } = message;
+      switch (type) {
+        case "userJoined": {
+          break;
+        }
+        case "sync": {
+          Y.applyUpdate(yDoc, new Uint8Array(message.update));
+          break;
+        }
+        case "update": {
+          {
+            Y.applyUpdate(yDoc, new Uint8Array(message.update));
+            break;
+          }
+        }
+        default: {
+          console.log("Unknown message type:", type);
+        }
+      }
     };
 
     ws.onclose = () => {

@@ -7,8 +7,8 @@ import { useGetDocument } from "../hooks/useDocs";
 import { currentDocState, userState } from "../atom";
 import DocEditorSkeleton from "../components/DocEditorSkeleton";
 import { useCustomYjsCollaboration } from "../hooks/useYjsCollaboration";
-import SummaryCard from "../components/SummaryCard";
 import EditHeader from "../components/EditHeader";
+import SideBar from "../components/SideBar";
 
 const DocEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -101,10 +101,7 @@ const DocEditor: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Left sidebar for summary and comments */}
-      <div className="w-1/4 p-4 bg-white shadow-md overflow-y-auto">
-        <SummaryCard />
-        <div className="h-0.5 bg-slate-200 my-3 rounded-full w-full" />
-      </div>
+      <SideBar />
 
       {/* Main content area */}
       <div className="flex-grow flex flex-col p-6">

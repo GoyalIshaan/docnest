@@ -14,12 +14,11 @@ export interface User {
   email: string;
 }
 
-export interface UpdateMessage {
-  type: "update";
-  update: number[];
-}
-
-export interface SyncMessage {
-  type: "sync";
-  update: number[];
+export interface Message {
+  id: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  chatId: string;
+  senderId: string;
 }

@@ -1,8 +1,7 @@
 import { ExtWebSocket } from "../types";
 import * as Y from "yjs";
 import WebSocket from "ws";
-import { comments, docs, prisma, workingDocuments } from "./wsDataTypes";
-import { initializeComments } from "./yjsCommentsRouter";
+import { docs, prisma, workingDocuments } from "./wsDataTypes";
 
 export async function handleJoin(
   ws: ExtWebSocket,
@@ -19,8 +18,6 @@ export async function handleJoin(
     await loadDocumentContent(documentId, doc);
   }
   const clients = workingDocuments.get(documentId) || [];
-  const commentsArray = await initializeComments(documentId, doc);
-  const initialComments = commentsArray.toArray();
 
   workingDocuments.set(documentId, [...clients, ws]);
   ws.yDoc = doc;
@@ -31,7 +28,6 @@ export async function handleJoin(
     JSON.stringify({
       type: "sync",
       update: Array.from(initialUpdate),
-      comments: initialComments,
     })
   );
 }

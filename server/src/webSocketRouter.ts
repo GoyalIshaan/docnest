@@ -1,13 +1,12 @@
 import { Server } from "http";
 import WebSocket from "ws";
 import { ExtWebSocket } from "./types";
-import { comments, docs, workingDocuments } from "./routers/wsDataTypes";
+import { docs, workingDocuments } from "./routers/wsDataTypes";
 import {
   handleJoin,
   handleUpdate,
   saveDocument,
 } from "./routers/yjsDocsRouter";
-import { handleCommentUpdate, saveComments } from "./routers/yjsCommentsRouter";
 
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocket.Server({ server });
@@ -44,7 +43,6 @@ export function setupWebSocketServer(server: Server) {
               errorResponse(ws, "Invalid comment update message");
               return;
             }
-            handleCommentUpdate(ws, commentUpdate);
             break;
           }
           default: {
@@ -74,7 +72,6 @@ export function setupWebSocketServer(server: Server) {
 
         if (updatedClients.length === 0) {
           docs.delete(ws.documentId);
-          comments.delete(ws.documentId);
         }
       }
     });
@@ -96,10 +93,6 @@ export function setupWebSocketServer(server: Server) {
   setInterval(() => {
     docs.forEach((doc, docId) => {
       saveDocument(docId, doc);
-      const commentsArray = comments.get(docId);
-      if (commentsArray) {
-        saveComments(docId, commentsArray);
-      }
     });
   }, 3000);
 }
