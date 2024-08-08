@@ -2,6 +2,7 @@ import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
 import { useSetRecoilState } from "recoil";
 import { userState } from "../atom";
+import { User } from "../types";
 
 interface SignUpData {
   username: string;
@@ -122,4 +123,29 @@ const useLogout = () => {
   return { logout };
 };
 
-export { useSignUp, useAutoSignUp, useLogin, useLogout };
+const useGetUserById = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User>({ id: "", username: "", email: "" });
+
+  const getUserById = useCallback(async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get(`${LOCALHOST}/api/user/id/${id}/`, {
+        withCredentials: true,
+      });
+      setUser(response.data.user);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "An unknown error occurred"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { getUserById, user, loading, error };
+};
+
+export { useSignUp, useAutoSignUp, useLogin, useLogout, useGetUserById };

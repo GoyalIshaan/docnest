@@ -2,7 +2,6 @@ import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { FileText, MoreVertical, Trash2, Loader2 } from "lucide-react";
 import { formatDate } from "../utils/formatDate";
-import { convertFromRaw } from "draft-js";
 
 interface DocCardProps {
   id: string;
@@ -24,19 +23,13 @@ const DocCard: React.FC<DocCardProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const plainTextContent = useMemo(() => {
-    try {
-      const parsedContent = JSON.parse(content);
-      if (parsedContent && parsedContent.blocks) {
-        const contentState = convertFromRaw(parsedContent);
-        return contentState.getPlainText();
-      } else {
-        return JSON.stringify(parsedContent);
-      }
-    } catch (error) {
-      return content;
-    }
-  }, [content]);
+  const stripHtmlTags = (html: string) => {
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
+  const plainTextContent = useMemo(() => stripHtmlTags(content), [content]);
 
   const handleMoreClick = (e: React.MouseEvent) => {
     e.preventDefault();

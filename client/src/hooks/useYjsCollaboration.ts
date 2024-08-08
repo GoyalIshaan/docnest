@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useRef } from "react";
 import * as Y from "yjs";
 import { useRecoilState } from "recoil";
@@ -12,6 +13,7 @@ export const useCustomYjsCollaboration = (
   const [error, setError] = useState<string | null>(null);
   const [currentDoc, setCurrentDoc] = useRecoilState(currentDocState);
   const wsRef = useRef<WebSocket | null>(null);
+  const isLocalUpdate = useRef(false);
 
   const connectToServer = useCallback(() => {
     const yDoc = new Y.Doc();
@@ -30,24 +32,21 @@ export const useCustomYjsCollaboration = (
     };
 
     ws.onmessage = (event: MessageEvent) => {
-      const message = JSON.parse(event.data);
-      const { type } = message;
+      const messageData = JSON.parse(event.data);
+      const { type } = messageData;
       switch (type) {
         case "userJoined": {
           break;
         }
         case "sync": {
-          Y.applyUpdate(yDoc, new Uint8Array(message.update));
+          Y.applyUpdate(yDoc, new Uint8Array(messageData.update));
           break;
         }
         case "update": {
           {
-            Y.applyUpdate(yDoc, new Uint8Array(message.update));
+            Y.applyUpdate(yDoc, new Uint8Array(messageData.update));
             break;
           }
-        }
-        default: {
-          console.log("Unknown message type:", type);
         }
       }
     };
@@ -97,7 +96,8 @@ export const useCustomYjsCollaboration = (
       setCurrentDoc((prevDoc) => ({ ...prevDoc, content }));
 
       const observer = () => {
-        setCurrentDoc((prevDoc) => ({ ...prevDoc, content: ytext.toString() }));
+        const content = ytext.toString();
+        setCurrentDoc((prevDoc) => ({ ...prevDoc, content }));
       };
 
       ytext.observe(observer);
@@ -108,16 +108,35 @@ export const useCustomYjsCollaboration = (
 
   useEffect(() => {
     if (doc) {
-      doc.on("update", (update: Uint8Array) => {
-        sendUpdate(update);
+      doc.on("update", (update: Uint8Array, origin: any) => {
+        if (origin !== wsRef.current) {
+          sendUpdate(update);
+        }
       });
     }
   }, [doc, sendUpdate]);
+
+  const updateContent = useCallback(
+    (content: string) => {
+      if (doc) {
+        const ytext = doc.getText("content");
+        isLocalUpdate.current = true;
+        doc.transact(() => {
+          const normalizedContent = content.replace(/\r\n|\r|\n/g, "\n");
+          ytext.delete(0, ytext.length);
+          ytext.insert(0, normalizedContent);
+        });
+        isLocalUpdate.current = false;
+      }
+    },
+    [doc]
+  );
 
   return {
     isConnected,
     error,
     getYText,
     currentDoc,
+    updateContent,
   };
 };

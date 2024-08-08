@@ -18,10 +18,8 @@ const DocEditor: React.FC = () => {
   const [docNotFound, setDocNotFound] = useState(false);
   const quillRef = useRef<ReactQuill>(null);
 
-  const { isConnected, error, getYText } = useCustomYjsCollaboration(
-    user.id,
-    id || ""
-  );
+  const { isConnected, error, getYText, updateContent } =
+    useCustomYjsCollaboration(user.id, id || "");
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -45,16 +43,9 @@ const DocEditor: React.FC = () => {
 
   const handleContentChange = useCallback(
     (content: string) => {
-      const ytext = getYText();
-      if (ytext) {
-        const delta = quillRef.current?.getEditor().getContents();
-        console.log(delta);
-        ytext.delete(0, ytext.length);
-        ytext.insert(0, content);
-        setCurrentDoc((prev) => ({ ...prev, content }));
-      }
+      updateContent(content);
     },
-    [getYText, setCurrentDoc]
+    [updateContent]
   );
 
   useEffect(() => {

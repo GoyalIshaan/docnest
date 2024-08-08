@@ -20,5 +20,8 @@ export interface Message {
   createdAt: string;
   updatedAt: string;
   chatId: string;
-  senderId: string;
+  sender: {
+    id: string;
+    email: string;
+  };
 }

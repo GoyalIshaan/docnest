@@ -136,7 +136,7 @@ userRouter.put("/", async (req, res) => {
   }
 });
 
-// @desc Get User By ID
+// @desc Get User By Email
 // @route GET /api/user/:email/
 // @access Private
 userRouter.get("/:email/", async (req, res) => {
@@ -145,6 +145,28 @@ userRouter.get("/:email/", async (req, res) => {
     const user = await prisma.user.findUnique({
       where: {
         email,
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error });
+  }
+});
+
+// @desc Get User By Email
+// @route GET /api/user/id/:email/
+// @access Private
+userRouter.get("/id/:id/", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: {
+        id,
       },
     });
 

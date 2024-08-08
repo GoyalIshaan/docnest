@@ -163,6 +163,69 @@ docRouter.get("/:id/", async (req: Request, res) => {
   }
 });
 
+// @desc Fetch Shared Users
+// @route GET /api/docs/:id/shared/
+// @access Private
+docRouter.get("/:id/shared/", async (req: Request, res) => {
+  try {
+    const { id } = req.params;
+    const sharedWith = await prisma.document.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        sharedWith: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+    res.status(200).json(sharedWith);
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error });
+  }
+});
+
+// @desc Fetch Doc Chats
+// @route GET /api/docs/:id/chats/
+// @access Private
+docRouter.get("/:id/chats/", async (req: Request, res) => {
+  try {
+    const { id } = req.params;
+    const document = await prisma.document.findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        messages: {
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            updatedAt: true,
+            sender: {
+              select: {
+                id: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    const messages = document.messages;
+    res.status(200).json({ messages });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error });
+  }
+});
+
 // @desc Update Title of Document
 // @route PUT /api/docs/:id/
 // @access Private
@@ -224,31 +287,6 @@ docRouter.put("/:id/summary/", async (req: Request, res) => {
     });
 
     res.status(200).json({ message: "Document summary updated" });
-  } catch (error) {
-    res.status(500).json({ message: "Internal server error", error });
-  }
-});
-
-// @desc Fetch Shared Users
-// @route GET /api/docs/:id/shared/
-// @access Private
-docRouter.get("/:id/shared/", async (req: Request, res) => {
-  try {
-    const { id } = req.params;
-    const sharedWith = await prisma.document.findUnique({
-      where: {
-        id: id,
-      },
-      select: {
-        sharedWith: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
-      },
-    });
-    res.status(200).json(sharedWith);
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error });
   }

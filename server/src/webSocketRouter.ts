@@ -1,12 +1,17 @@
 import { Server } from "http";
 import WebSocket from "ws";
 import { ExtWebSocket } from "./types";
-import { docs, workingDocuments } from "./routers/wsDataTypes";
+import { chattingUsers, docs, workingDocuments } from "./routers/wsDataTypes";
 import {
   handleJoin,
   handleUpdate,
   saveDocument,
 } from "./routers/yjsDocsRouter";
+import {
+  deleteMessage,
+  handleJoinChat,
+  sendMessage,
+} from "./routers/wsChatRouter";
 
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocket.Server({ server });
@@ -28,6 +33,10 @@ export function setupWebSocketServer(server: Server) {
             await handleJoin(ws, userId, documentId);
             break;
           }
+          case "joinChat": {
+            handleJoinChat(ws, data.userId, data.documentId);
+            break;
+          }
           case "update": {
             const { updates } = data;
             if (!updates) {
@@ -37,12 +46,22 @@ export function setupWebSocketServer(server: Server) {
             handleUpdate(ws, updates);
             break;
           }
-          case "commentUpdate": {
-            const { commentUpdate } = data;
-            if (!commentUpdate) {
-              errorResponse(ws, "Invalid comment update message");
+          case "createMessage": {
+            const { content } = data;
+            if (!content) {
+              errorResponse(ws, "Invalid message content");
               return;
             }
+            sendMessage(ws, content);
+            break;
+          }
+          case "deleteMessage": {
+            const { id } = data;
+            if (!id) {
+              errorResponse(ws, "Invalid message ID");
+              return;
+            }
+            deleteMessage(ws, id);
             break;
           }
           default: {
@@ -65,10 +84,13 @@ export function setupWebSocketServer(server: Server) {
 
     ws.on("close", () => {
       if (ws.documentId) {
-        console.log(`Client disconnected from document ${ws.documentId}`);
         const clients = workingDocuments.get(ws.documentId) || [];
         const updatedClients = clients.filter((client) => client !== ws);
         workingDocuments.set(ws.documentId, updatedClients);
+
+        const users = chattingUsers.get(ws.documentId) || [];
+        const updatedUsers = users.filter((user) => user !== ws);
+        chattingUsers.set(ws.documentId, updatedUsers);
 
         if (updatedClients.length === 0) {
           docs.delete(ws.documentId);

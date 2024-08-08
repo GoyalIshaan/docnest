@@ -3,6 +3,7 @@ import { useRecoilValue, useSetRecoilState } from "recoil";
 import {
   currentDocState,
   docsState,
+  messagesState,
   sharedDocsState,
   sharedWithUsers,
 } from "../atom";
@@ -58,6 +59,37 @@ const useGetSharedDocs = () => {
   }, [setDocsState]);
 
   return { getSharedDocs, loading, error };
+};
+
+const useGetDocMessages = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const setMessages = useSetRecoilState(messagesState);
+
+  const getDocMessages = useCallback(
+    async (docId: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await axios.get(
+          `${LOCALHOST}/api/docs/${docId}/chats/`,
+          {
+            withCredentials: true,
+          }
+        );
+        setMessages(response.data.messages);
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "An unknown error occurred"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setMessages]
+  );
+
+  return { getDocMessages, loading, error };
 };
 
 const useCreateDoc = () => {
@@ -342,4 +374,5 @@ export {
   useGetSharedDocs,
   useUpdateTitle,
   useUpdateSummary,
+  useGetDocMessages,
 };
