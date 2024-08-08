@@ -93,6 +93,7 @@ export const useCustomYjsCollaboration = (
     if (doc) {
       const ytext = doc.getText("content");
       const content = ytext.toString();
+      console.log("Initial content:", content);
       setCurrentDoc((prevDoc) => ({ ...prevDoc, content }));
 
       const observer = () => {
@@ -122,9 +123,8 @@ export const useCustomYjsCollaboration = (
         const ytext = doc.getText("content");
         isLocalUpdate.current = true;
         doc.transact(() => {
-          const normalizedContent = content.replace(/\r\n|\r|\n/g, "\n");
           ytext.delete(0, ytext.length);
-          ytext.insert(0, normalizedContent);
+          ytext.insert(0, content);
         });
         isLocalUpdate.current = false;
       }
