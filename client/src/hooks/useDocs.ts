@@ -282,7 +282,6 @@ const useUpdateSummary = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const summary = useRecoilValue(currentDocState).summary;
-  console.log("summary", summary);
 
   const updateSummary = useCallback(
     async (docId: string) => {

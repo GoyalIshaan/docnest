@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useRef } from "react";
 import * as Y from "yjs";
-import { useRecoilState } from "recoil";
+import { useSetRecoilState } from "recoil";
 import { currentDocState } from "../atom";
 
 export const useCustomYjsCollaboration = (
@@ -11,13 +11,12 @@ export const useCustomYjsCollaboration = (
   const [doc, setDoc] = useState<Y.Doc | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentDoc, setCurrentDoc] = useRecoilState(currentDocState);
+  const setCurrentDoc = useSetRecoilState(currentDocState);
   const wsRef = useRef<WebSocket | null>(null);
-  const isLocalUpdate = useRef(false);
 
   const connectToServer = useCallback(() => {
     const yDoc = new Y.Doc();
-    const ws = new WebSocket("ws://localhost:8000");
+    const ws = new WebSocket("ws://localhost:8000/");
 
     ws.onopen = () => {
       console.log("WebSocket connection established");
@@ -35,18 +34,21 @@ export const useCustomYjsCollaboration = (
       const messageData = JSON.parse(event.data);
       const { type } = messageData;
       switch (type) {
-        case "userJoined": {
-          break;
-        }
         case "sync": {
-          Y.applyUpdate(yDoc, new Uint8Array(messageData.update));
+          Y.applyUpdate(
+            yDoc,
+            new Uint8Array(messageData.update),
+            wsRef.current
+          );
           break;
         }
         case "update": {
-          {
-            Y.applyUpdate(yDoc, new Uint8Array(messageData.update));
-            break;
-          }
+          Y.applyUpdate(
+            yDoc,
+            new Uint8Array(messageData.update),
+            wsRef.current
+          );
+          break;
         }
       }
     };
@@ -54,6 +56,7 @@ export const useCustomYjsCollaboration = (
     ws.onclose = () => {
       console.log("WebSocket connection closed");
       setIsConnected(false);
+      setTimeout(connectToServer, 5000);
     };
 
     ws.onerror = (error) => {
@@ -69,19 +72,22 @@ export const useCustomYjsCollaboration = (
     };
   }, [userId, documentId]);
 
-  useEffect(() => {
-    const cleanup = connectToServer();
-    return cleanup;
-  }, [connectToServer]);
-
-  const sendUpdate = useCallback((update: Uint8Array) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "update",
-          updates: Array.from(update),
-        })
-      );
+  // handles local updates
+  const sendUpdates = useCallback((update: Uint8Array, origin: any) => {
+    if (origin !== wsRef.current) {
+      try {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "update",
+              updates: Array.from(update),
+            })
+          );
+        }
+      } catch (error) {
+        console.error("Error sending update:", error);
+        setError("Failed to send update");
+      }
     }
   }, []);
 
@@ -89,54 +95,55 @@ export const useCustomYjsCollaboration = (
     return doc ? doc.getText("content") : null;
   }, [doc]);
 
-  useEffect(() => {
-    if (doc) {
-      const ytext = doc.getText("content");
-      const content = ytext.toString();
-      console.log("Initial content:", content);
-      setCurrentDoc((prevDoc) => ({ ...prevDoc, content }));
-
-      const observer = () => {
-        const content = ytext.toString();
-        setCurrentDoc((prevDoc) => ({ ...prevDoc, content }));
-      };
-
-      ytext.observe(observer);
-
-      return () => ytext.unobserve(observer);
-    }
-  }, [doc, setCurrentDoc]);
-
-  useEffect(() => {
-    if (doc) {
-      doc.on("update", (update: Uint8Array, origin: any) => {
-        if (origin !== wsRef.current) {
-          sendUpdate(update);
-        }
-      });
-    }
-  }, [doc, sendUpdate]);
-
-  const updateContent = useCallback(
+  const updateYText = useCallback(
     (content: string) => {
-      if (doc) {
-        const ytext = doc.getText("content");
-        isLocalUpdate.current = true;
-        doc.transact(() => {
-          ytext.delete(0, ytext.length);
-          ytext.insert(0, content);
-        });
-        isLocalUpdate.current = false;
-      }
+      if (!doc) return;
+      const ytext = doc.getText("content");
+      doc.transact(() => {
+        ytext.delete(0, ytext.length);
+        ytext.insert(0, content);
+      });
     },
     [doc]
   );
+
+  useEffect(() => {
+    const cleanup = connectToServer();
+    return cleanup;
+  }, [connectToServer]);
+
+  // Sync changes to Ytext with the currentDoc state
+  useEffect(() => {
+    if (!doc) return;
+
+    const ytext = doc.getText("content");
+    const content = ytext.toString();
+    setCurrentDoc((prevDoc) => ({ ...prevDoc, content }));
+
+    const yjsObserver = () => {
+      const content = ytext.toString();
+      setCurrentDoc((prevDoc) => ({ ...prevDoc, content }));
+    };
+
+    ytext.observe(yjsObserver);
+
+    return () => ytext.unobserve(yjsObserver);
+  }, [doc, setCurrentDoc]);
+
+  useEffect(() => {
+    if (!doc) return;
+
+    doc.on("update", sendUpdates);
+
+    return () => {
+      doc.off("update", sendUpdates);
+    };
+  }, [doc, sendUpdates]);
 
   return {
     isConnected,
     error,
     getYText,
-    currentDoc,
-    updateContent,
+    updateYText,
   };
 };

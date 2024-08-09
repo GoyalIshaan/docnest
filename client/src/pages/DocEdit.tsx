@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useRecoilState, useRecoilValue } from "recoil";
 import ReactQuill from "react-quill";
@@ -9,23 +9,28 @@ import DocEditorSkeleton from "../components/DocEditorSkeleton";
 import { useCustomYjsCollaboration } from "../hooks/useYjsCollaboration";
 import EditHeader from "../components/EditHeader";
 import SideBar from "../components/SideBar";
+import DocNotFoundCard from "../components/DocNotFoundCard";
 
 const DocEditor: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: documentId } = useParams<{ id: string }>();
   const { getDocument, loading } = useGetDocument();
   const [currentDoc, setCurrentDoc] = useRecoilState(currentDocState);
-  const user = useRecoilValue(userState);
-  const [docNotFound, setDocNotFound] = useState(false);
+  const userId = useRef<string>(useRecoilValue(userState).id);
+  const [docNotFound, setDocNotFound] = useState<boolean>(false);
   const quillRef = useRef<ReactQuill>(null);
 
-  const { isConnected, error, getYText, updateContent } =
-    useCustomYjsCollaboration(user.id, id || "");
+  if (!documentId) {
+    throw new Error("DocumentId not found");
+  }
+
+  const { isConnected, error, getYText, updateYText } =
+    useCustomYjsCollaboration(userId.current, documentId);
 
   useEffect(() => {
     const loadDocument = async () => {
-      if (id) {
+      if (documentId) {
         try {
-          const doc = await getDocument(id);
+          const doc = await getDocument(documentId);
           if (doc) {
             setCurrentDoc(doc);
           } else {
@@ -39,14 +44,7 @@ const DocEditor: React.FC = () => {
     };
 
     loadDocument();
-  }, [id, getDocument, setCurrentDoc]);
-
-  const handleContentChange = useCallback(
-    (content: string) => {
-      updateContent(content);
-    },
-    [updateContent]
-  );
+  }, [documentId, getDocument, setCurrentDoc]);
 
   useEffect(() => {
     if (isConnected && quillRef.current) {
@@ -62,23 +60,16 @@ const DocEditor: React.FC = () => {
     }
   }, [isConnected, getYText]);
 
+  const handleContentChange = (content: string) => {
+    updateYText(content);
+  };
+
   if (loading) {
     return <DocEditorSkeleton />;
   }
 
   if (docNotFound) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <div className="text-center p-8 bg-white rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Document Not Found
-          </h2>
-          <p className="text-gray-600">
-            The document you're looking for doesn't exist or has been removed.
-          </p>
-        </div>
-      </div>
-    );
+    return <DocNotFoundCard />;
   }
 
   if (error) {

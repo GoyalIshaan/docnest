@@ -35,7 +35,7 @@ export async function handleJoin(
 export function handleUpdate(ws: ExtWebSocket, updates: number[]) {
   if (!ws.yDoc || !ws.documentId) return;
 
-  Y.applyUpdate(ws.yDoc, new Uint8Array(updates));
+  Y.applyUpdate(ws.yDoc, new Uint8Array(updates), ws);
 
   broadcastUpdate(ws.documentId, updates, ws);
 }
