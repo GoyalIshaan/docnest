@@ -108,8 +108,8 @@ const useCreateDoc = () => {
         },
         { withCredentials: true }
       );
-      setCurrentDocState(doc.data.doc);
-      return doc.data.doc;
+      setCurrentDocState(doc.data);
+      return doc.data;
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "An unknown error occurred"

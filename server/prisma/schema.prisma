@@ -30,6 +30,7 @@ model Document {
   ownerId     String
   sharedWith  User[]   @relation("SharedDocuments")
   messages Message[]
+  @@index([id, ownerId])
 }
 
 
