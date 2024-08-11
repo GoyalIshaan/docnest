@@ -85,10 +85,7 @@ const DocEditor: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Left sidebar for summary and comments */}
       <SideBar />
-
-      {/* Main content area */}
       <div className="flex-grow flex flex-col p-6">
         <EditHeader />
         <div className="flex-grow bg-white rounded-lg shadow-lg overflow-hidden relative">
