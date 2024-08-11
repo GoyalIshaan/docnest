@@ -10,48 +10,27 @@ export const useCustomYjsCollaboration = (
   userId: string,
   documentId: string
 ) => {
-  const [doc, setDoc] = useState<Y.Doc | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const setCurrentDoc = useSetRecoilState(currentDocState);
   const wsRef = useRef<WebSocket | null>(null);
+  const docRef = useRef<Y.Doc>(new Y.Doc());
 
   const connectToServer = useCallback(() => {
-    const yDoc = new Y.Doc();
     const ws = new WebSocket(`${WS_URL}`);
 
     ws.onopen = () => {
       console.log("WebSocket connection established");
       setIsConnected(true);
       setError(null);
-      const joinMessage = {
-        type: "join",
-        userId,
-        documentId,
-      };
-      ws.send(JSON.stringify(joinMessage));
+      ws.send(JSON.stringify({ type: "join", userId, documentId }));
     };
 
     ws.onmessage = (event: MessageEvent) => {
       const messageData = JSON.parse(event.data);
-      const { type } = messageData;
-      switch (type) {
-        case "sync": {
-          Y.applyUpdate(
-            yDoc,
-            new Uint8Array(messageData.update),
-            wsRef.current
-          );
-          break;
-        }
-        case "update": {
-          Y.applyUpdate(
-            yDoc,
-            new Uint8Array(messageData.update),
-            wsRef.current
-          );
-          break;
-        }
+      const { type, update } = messageData;
+      if (type === "sync" || type === "update") {
+        Y.applyUpdate(docRef.current, new Uint8Array(update));
       }
     };
 
@@ -67,80 +46,57 @@ export const useCustomYjsCollaboration = (
     };
 
     wsRef.current = ws;
-    setDoc(yDoc);
 
     return () => {
       ws.close();
     };
   }, [userId, documentId]);
 
-  // handles local updates
-  const sendUpdates = useCallback((update: Uint8Array, origin: any) => {
-    if (origin !== wsRef.current) {
-      try {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(
-            JSON.stringify({
-              type: "update",
-              updates: Array.from(update),
-            })
-          );
-        }
-      } catch (error) {
-        console.error("Error sending update:", error);
-        setError("Failed to send update");
-      }
+  const sendUpdates = useCallback((update: Uint8Array) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "update",
+          updates: Array.from(update),
+        })
+      );
     }
   }, []);
-
-  const getYText = useCallback(() => {
-    return doc ? doc.getText("content") : null;
-  }, [doc]);
-
-  const updateYText = useCallback(
-    (content: string) => {
-      if (!doc) return;
-      const ytext = doc.getText("content");
-      doc.transact(() => {
-        ytext.delete(0, ytext.length);
-        ytext.insert(0, content);
-      });
-    },
-    [doc]
-  );
 
   useEffect(() => {
     const cleanup = connectToServer();
     return cleanup;
   }, [connectToServer]);
 
-  // Sync changes to Ytext with the currentDoc state
   useEffect(() => {
-    if (!doc) return;
+    const ytext = docRef.current.getText("content");
+    const currentDocRef = docRef.current;
 
-    const ytext = doc.getText("content");
-    const content = ytext.toString();
-    setCurrentDoc((prevDoc) => ({ ...prevDoc, content }));
-
-    const yjsObserver = () => {
+    const updateContent = () => {
       const content = ytext.toString();
       setCurrentDoc((prevDoc) => ({ ...prevDoc, content }));
     };
 
-    ytext.observe(yjsObserver);
-
-    return () => ytext.unobserve(yjsObserver);
-  }, [doc, setCurrentDoc]);
-
-  useEffect(() => {
-    if (!doc) return;
-
-    doc.on("update", sendUpdates);
+    ytext.observe(updateContent);
+    currentDocRef.on("update", sendUpdates);
 
     return () => {
-      doc.off("update", sendUpdates);
+      ytext.unobserve(updateContent);
+      currentDocRef.off("update", sendUpdates);
     };
-  }, [doc, sendUpdates]);
+  }, [sendUpdates, setCurrentDoc]);
+
+  const getYText = useCallback(() => {
+    return docRef.current.getText("content");
+  }, []);
+
+  const updateYText = useCallback((content: string) => {
+    const ytext = docRef.current.getText("content");
+    docRef.current.transact(() => {
+      ytext.delete(0, ytext.length);
+      ytext.insert(0, content);
+    });
+  }, []);
 
   return {
     isConnected,

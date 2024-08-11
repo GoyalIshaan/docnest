@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useRecoilState, useRecoilValue } from "recoil";
 import ReactQuill from "react-quill";
@@ -60,9 +60,12 @@ const DocEditor: React.FC = () => {
     }
   }, [isConnected, getYText]);
 
-  const handleContentChange = (content: string) => {
-    updateYText(content);
-  };
+  const handleContentChange = useCallback(
+    (content: string) => {
+      updateYText(content);
+    },
+    [updateYText]
+  );
 
   if (loading) {
     return <DocEditorSkeleton />;

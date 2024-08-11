@@ -404,12 +404,14 @@ docRouter.delete("/:id/", async (req: Request, res) => {
         id: id,
       },
     });
-
+    console.log(doc);
     if (!doc) {
+      console.log("Document not found");
       return res.status(404).json({ message: "Document not found" });
     }
 
     if (doc.ownerId !== req.user?.id) {
+      console.log("Unauthorized");
       return res.status(403).json({ message: "Unauthorized" });
     }
 
@@ -421,6 +423,7 @@ docRouter.delete("/:id/", async (req: Request, res) => {
 
     res.status(200).json({ message: "Document deleted" });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: "Internal server error", error });
   }
 });
