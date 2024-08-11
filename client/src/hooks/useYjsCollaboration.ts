@@ -4,6 +4,8 @@ import * as Y from "yjs";
 import { useSetRecoilState } from "recoil";
 import { currentDocState } from "../atom";
 
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
+
 export const useCustomYjsCollaboration = (
   userId: string,
   documentId: string
@@ -16,7 +18,7 @@ export const useCustomYjsCollaboration = (
 
   const connectToServer = useCallback(() => {
     const yDoc = new Y.Doc();
-    const ws = new WebSocket("ws://localhost:8000/");
+    const ws = new WebSocket(`${WS_URL}`);
 
     ws.onopen = () => {
       console.log("WebSocket connection established");

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRecoilState } from "recoil";
 import { messagesState } from "../atom";
 
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
+
 export const useWebSocketMessageRouter = (
   userId: string,
   documentId: string
@@ -12,7 +14,7 @@ export const useWebSocketMessageRouter = (
   const wsRef = useRef<WebSocket | null>(null);
 
   const connectToServer = useCallback(() => {
-    const ws = new WebSocket("ws://localhost:8000");
+    const ws = new WebSocket(`${WS_URL}`);
 
     ws.onopen = () => {
       console.log("WebSocket connection established");

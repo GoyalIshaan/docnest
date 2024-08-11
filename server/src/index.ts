@@ -13,11 +13,20 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-const port = process.env.PORT || 8000;
+const port = parseInt(process.env.PORT || "8000", 10);
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:5173"];
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -28,10 +37,13 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Hello, welcome to the API!");
 });
 
+app.get("/api/", (req: Request, res: Response) => {
+  res.send("Hello, welcome to the API Gateway!");
+});
+
 app.use("/api/user", userRouter);
 app.use("/api/docs", authMiddleware, docRouter);
 
-// Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   res.status(500).send("Something broke!");
@@ -40,5 +52,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 setupWebSocketServer(server);
 
 server.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server is running on port ${port}`);
+  console.log(`Allowed origins: ${allowedOrigins.join(", ")}`);
 });

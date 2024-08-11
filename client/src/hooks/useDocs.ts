@@ -9,7 +9,7 @@ import {
 } from "../atom";
 import { useCallback, useState } from "react";
 
-const LOCALHOST = "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const useGetUserDocs = () => {
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ const useGetUserDocs = () => {
     try {
       setLoading(true);
       setError(null);
-      const docs = await axios.get(`${LOCALHOST}/api/docs/`, {
+      const docs = await axios.get(`${API_URL}/api/docs/`, {
         withCredentials: true,
       });
       setDocsState(docs.data.docs);
@@ -45,7 +45,7 @@ const useGetSharedDocs = () => {
     try {
       setLoading(true);
       setError(null);
-      const docs = await axios.get(`${LOCALHOST}/api/docs/shared/`, {
+      const docs = await axios.get(`${API_URL}/api/docs/shared/`, {
         withCredentials: true,
       });
       setDocsState(docs.data.docs);
@@ -72,7 +72,7 @@ const useGetDocMessages = () => {
         setLoading(true);
         setError(null);
         const response = await axios.get(
-          `${LOCALHOST}/api/docs/${docId}/chats/`,
+          `${API_URL}/api/docs/${docId}/chats/`,
           {
             withCredentials: true,
           }
@@ -101,7 +101,7 @@ const useCreateDoc = () => {
       setLoading(true);
       setError(null);
       const doc = await axios.post(
-        `${LOCALHOST}/api/docs/`,
+        `${API_URL}/api/docs/`,
         {
           title: "Untitled Document",
           content: "",
@@ -128,7 +128,7 @@ const useDeleteDoc = () => {
     try {
       setLoading(true);
       setError(null);
-      await axios.delete(`${LOCALHOST}/api/docs/${id}`, {
+      await axios.delete(`${API_URL}/api/docs/${id}`, {
         withCredentials: true,
       });
     } catch (error) {
@@ -152,7 +152,7 @@ const useGetDocument = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get(`${LOCALHOST}/api/docs/${id}`, {
+        const response = await axios.get(`${API_URL}/api/docs/${id}`, {
           withCredentials: true,
         });
         const doc = response.data;
@@ -193,7 +193,7 @@ const useSaveDocChanges = () => {
       setLoading(true);
       setError(null);
       await axios.put(
-        `${LOCALHOST}/api/docs/${currentDoc.id}`,
+        `${API_URL}/api/docs/${currentDoc.id}`,
         {
           title: currentDoc.title,
           content: currentDoc.content,
@@ -225,7 +225,7 @@ const useGetCollaborators = () => {
         setLoading(true);
         setError(null);
         const response = await axios.get(
-          `${LOCALHOST}/api/docs/${docId}/shared/`,
+          `${API_URL}/api/docs/${docId}/shared/`,
           {
             withCredentials: true,
           }
@@ -256,7 +256,7 @@ const useUpdateTitle = () => {
         setLoading(true);
         setError(null);
         await axios.put(
-          `${LOCALHOST}/api/docs/${docId}/title/`,
+          `${API_URL}/api/docs/${docId}/title/`,
           {
             title,
           },
@@ -289,7 +289,7 @@ const useUpdateSummary = () => {
         setLoading(true);
         setError(null);
         await axios.put(
-          `${LOCALHOST}/api/docs/${docId}/summary/`,
+          `${API_URL}/api/docs/${docId}/summary/`,
           {
             summary,
           },
@@ -320,7 +320,7 @@ const useAddCollaborator = () => {
       setLoading(true);
       setError(null);
       await axios.put(
-        `${LOCALHOST}/api/docs/${docId}/${email}/`,
+        `${API_URL}/api/docs/${docId}/${email}/`,
         {},
         {
           withCredentials: true,
@@ -346,7 +346,7 @@ const useRemoveCollaborator = () => {
     try {
       setLoading(true);
       setError(null);
-      await axios.delete(`${LOCALHOST}/api/docs/${docId}/${email}/`, {
+      await axios.delete(`${API_URL}/api/docs/${docId}/${email}/`, {
         withCredentials: true,
       });
     } catch (error) {

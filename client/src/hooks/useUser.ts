@@ -14,7 +14,7 @@ interface LoginData {
   password: string;
 }
 
-const LOCALHOST = "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const useAutoSignUp = () => {
   const setUserState = useSetRecoilState(userState);
@@ -23,7 +23,7 @@ const useAutoSignUp = () => {
   const autoSignUp = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get(`${LOCALHOST}/api/user/me`, {
+      const response = await axios.get(`${API_URL}/api/user/me`, {
         withCredentials: true,
       });
       setUserState(response.data.user);
@@ -52,7 +52,7 @@ const useSignUp = () => {
       setLoading(true);
       setError(null);
       const user = await axios.post(
-        `${LOCALHOST}/api/user/`,
+        `${API_URL}/api/user/`,
         {
           username,
           email,
@@ -81,8 +81,9 @@ const useLogin = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log(`${API_URL}/api/user/me/`);
       const user = await axios.post(
-        `${LOCALHOST}/api/user/me/`,
+        `${API_URL}/api/user/me/`,
         {
           email,
           password,
@@ -108,7 +109,7 @@ const useLogout = () => {
   const logout = async () => {
     try {
       await axios.put(
-        `${LOCALHOST}/api/user/`,
+        `${API_URL}/api/user/`,
         {},
         {
           withCredentials: true,
@@ -132,7 +133,7 @@ const useGetUserById = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${LOCALHOST}/api/user/id/${id}/`, {
+      const response = await axios.get(`${API_URL}/api/user/id/${id}/`, {
         withCredentials: true,
       });
       setUser(response.data.user);
