@@ -79,8 +79,8 @@ userRouter.post("/", async (req, res) => {
 
     res.cookie("cookie", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
     });
     res.status(201).json({ user });
   } catch (error) {
@@ -115,8 +115,8 @@ userRouter.post("/me/", async (req, res) => {
 
     res.cookie("cookie", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
     });
     res.status(201).json({ user });
   } catch (error) {
