@@ -48,7 +48,11 @@ function broadcastUpdate(
   const clients = workingDocuments.get(docId) || [];
   clients.forEach((client: ExtWebSocket) => {
     console.log("Broadcasting update to client");
-    if (client !== sender && client.readyState === WebSocket.OPEN) {
+    if (
+      client !== sender &&
+      client.userId !== sender.userId &&
+      client.readyState === WebSocket.OPEN
+    ) {
       client.send(JSON.stringify({ type: "update", update }));
     }
   });

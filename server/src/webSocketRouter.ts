@@ -116,7 +116,7 @@ export function setupWebSocketServer(server: Server) {
     docs.forEach((doc, docId) => {
       saveDocument(docId, doc);
     });
-  }, 3000);
+  }, 5000);
 }
 
 const errorResponse = (ws: ExtWebSocket, message: string) => {
