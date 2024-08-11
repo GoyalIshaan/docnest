@@ -80,7 +80,7 @@ userRouter.post("/", async (req, res) => {
     res.cookie("cookie", token, {
       httpOnly: true,
       secure: true,
-      sameSite: "none",
+      sameSite: "lax",
     });
     res.status(201).json({ user });
   } catch (error) {
@@ -116,7 +116,7 @@ userRouter.post("/me/", async (req, res) => {
     res.cookie("cookie", token, {
       httpOnly: true,
       secure: true,
-      sameSite: "none",
+      sameSite: "lax",
     });
     res.status(201).json({ user });
   } catch (error) {
