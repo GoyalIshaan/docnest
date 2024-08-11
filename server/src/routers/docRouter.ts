@@ -18,7 +18,7 @@ docRouter.post("/", async (req: Request, res) => {
     const ydoc = new Y.Doc();
 
     const ytext = ydoc.getText("content");
-    ytext.insert(0, "\uFEFF");
+    ytext.insert(0, "");
 
     const encodedState = Y.encodeStateAsUpdate(ydoc);
 
@@ -32,7 +32,7 @@ docRouter.post("/", async (req: Request, res) => {
     res.status(201).json({
       id: doc.id,
       title: "Untitled Document",
-      content: "\uFEFF",
+      content: "",
     });
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error });
