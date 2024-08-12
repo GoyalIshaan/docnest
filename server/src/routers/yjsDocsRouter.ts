@@ -3,6 +3,8 @@ import * as Y from "yjs";
 import WebSocket from "ws";
 import { docs, prisma, workingDocuments } from "./wsDataTypes";
 
+let pastUpdates: number[] = [];
+
 export async function handleJoin(
   ws: ExtWebSocket,
   userId: string,
@@ -35,9 +37,13 @@ export async function handleJoin(
 export function handleUpdate(ws: ExtWebSocket, updates: number[]) {
   if (!ws.yDoc || !ws.documentId) return;
 
-  Y.applyUpdate(ws.yDoc, new Uint8Array(updates), ws);
-
-  broadcastUpdate(ws.documentId, updates, ws);
+  if (updates != pastUpdates) {
+    Y.applyUpdate(ws.yDoc, new Uint8Array(updates), ws);
+    pastUpdates = updates;
+    broadcastUpdate(ws.documentId, updates, ws);
+  } else {
+    return;
+  }
 }
 
 function broadcastUpdate(
@@ -47,13 +53,15 @@ function broadcastUpdate(
 ) {
   const clients = workingDocuments.get(docId) || [];
   clients.forEach((client: ExtWebSocket) => {
-    console.log("Broadcasting update to client");
     if (
       client !== sender &&
       client.userId !== sender.userId &&
       client.readyState === WebSocket.OPEN
     ) {
-      client.send(JSON.stringify({ type: "update", update }));
+      console.log("Broadcasting update to client");
+      client.send(
+        JSON.stringify({ type: "update", update, sender: sender.userId })
+      );
     }
   });
 }

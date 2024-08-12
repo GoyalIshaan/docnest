@@ -28,9 +28,15 @@ export const useCustomYjsCollaboration = (
 
     ws.onmessage = (event: MessageEvent) => {
       const messageData = JSON.parse(event.data);
-      const { type, update } = messageData;
-      if (type === "sync" || type === "update") {
+      const { type } = messageData;
+      if (type === "sync") {
+        const { update } = messageData;
         Y.applyUpdate(docRef.current, new Uint8Array(update));
+      } else if (type === "update") {
+        const { sender, update } = messageData;
+        if (sender !== userId) {
+          Y.applyUpdate(docRef.current, new Uint8Array(update));
+        }
       }
     };
 
