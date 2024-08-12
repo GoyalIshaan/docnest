@@ -20,7 +20,6 @@ export function setupWebSocketServer(server: Server) {
     ws.isAlive = true;
 
     ws.on("message", async (message: string) => {
-      console.log("Received message:", message);
       try {
         const data = JSON.parse(message);
         switch (data.type) {

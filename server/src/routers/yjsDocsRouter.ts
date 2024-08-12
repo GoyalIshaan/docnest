@@ -38,6 +38,7 @@ export function handleUpdate(ws: ExtWebSocket, updates: number[]) {
   if (!ws.yDoc || !ws.documentId) return;
 
   if (updates != pastUpdates) {
+    console.log("new update received");
     Y.applyUpdate(ws.yDoc, new Uint8Array(updates), ws);
     pastUpdates = updates;
     broadcastUpdate(ws.documentId, updates, ws);
